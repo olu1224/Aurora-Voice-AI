@@ -2,6 +2,7 @@
   "name": "Aurora Voice AI",
   "description": "A high-performance voice agent platform for businesses to qualify leads, handle calls, and book meetings 24/7 using Gemini 2.5 Live API.",
   "requestFramePermissions": [
-    "microphone"
+    "microphone",
+    "geolocation"
   ]
 }

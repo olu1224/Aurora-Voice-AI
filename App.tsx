@@ -8,12 +8,16 @@ import {
   Users, 
   CreditCard, 
   Settings as SettingsIcon,
-  Bell,
-  Search,
-  Menu,
-  X,
-  Home as HomeIcon,
-  Sparkles
+  Bell, 
+  Search, 
+  Menu, 
+  X, 
+  Home as HomeIcon, 
+  Sparkles, 
+  Image as ImageIcon, 
+  BrainCircuit,
+  MessageSquareCode,
+  Beaker
 } from 'lucide-react';
 import Dashboard from './views/Dashboard';
 import VoiceAgent from './views/VoiceAgent';
@@ -22,6 +26,10 @@ import Leads from './views/Leads';
 import Billing from './views/Billing';
 import Home from './views/Home';
 import SettingsView from './views/Settings';
+import Intelligence from './views/Intelligence';
+import VisualAI from './views/VisualAI';
+import ConversationAI from './views/ConversationAI';
+import Experiments from './views/Experiments';
 import { AuroraLogo } from './constants';
 
 const SidebarItem: React.FC<{ to: string; icon: React.ReactNode; label: string }> = ({ to, icon, label }) => (
@@ -67,26 +75,30 @@ const AppContent: React.FC = () => {
             </h1>
           </div>
 
-          <nav className="flex-1 space-y-2">
-            <SidebarItem to="/" icon={<HomeIcon size={20} />} label="Overview" />
-            <SidebarItem to="/dashboard" icon={<LayoutDashboard size={20} />} label="Command Center" />
-            <SidebarItem to="/agent" icon={<Mic2 size={20} />} label="Voice Agent" />
-            <SidebarItem to="/knowledge" icon={<Database size={20} />} label="Knowledge Base" />
-            <SidebarItem to="/leads" icon={<Users size={20} />} label="Leads & CRM" />
-            <SidebarItem to="/billing" icon={<CreditCard size={20} />} label="Pay-as-you-go" />
+          <nav className="flex-1 space-y-1 overflow-y-auto pr-2">
+            <SidebarItem to="/" icon={<HomeIcon size={18} />} label="Overview" />
+            <SidebarItem to="/dashboard" icon={<LayoutDashboard size={18} />} label="Command Center" />
+            <SidebarItem to="/agent" icon={<Mic2 size={18} />} label="Voice Agent" />
+            <SidebarItem to="/conversation" icon={<MessageSquareCode size={18} />} label="Conversation AI" />
+            <SidebarItem to="/experiments" icon={<Beaker size={18} />} label="Experiments" />
+            <SidebarItem to="/intelligence" icon={<BrainCircuit size={18} />} label="AI Intelligence" />
+            <SidebarItem to="/visual" icon={<ImageIcon size={18} />} label="Visual Content" />
+            <SidebarItem to="/knowledge" icon={<Database size={18} />} label="Knowledge Base" />
+            <SidebarItem to="/leads" icon={<Users size={18} />} label="Leads & CRM" />
+            <SidebarItem to="/billing" icon={<CreditCard size={18} />} label="Pay-as-you-go" />
           </nav>
 
           <div className="pt-6 border-t border-slate-800">
-            <SidebarItem to="/settings" icon={<SettingsIcon size={20} />} label="Settings" />
+            <SidebarItem to="/settings" icon={<SettingsIcon size={18} />} label="Settings" />
             <div className="mt-6 p-4 bg-gradient-to-br from-cyan-500/10 to-teal-500/10 rounded-2xl border border-cyan-500/20">
-              <p className="text-xs text-cyan-400 font-semibold uppercase tracking-wider mb-2">Current Balance</p>
+              <p className="text-[10px] text-cyan-400 font-semibold uppercase tracking-wider mb-1">Account Balance</p>
               <div className="flex items-center justify-between">
-                <p className="text-2xl font-bold text-white">$42.50</p>
-                <Sparkles size={16} className="text-cyan-400 animate-pulse" />
+                <p className="text-xl font-bold text-white">$42.50</p>
+                <Sparkles size={14} className="text-cyan-400 animate-pulse" />
               </div>
               <button 
                 onClick={() => navigate('/billing')}
-                className="mt-3 w-full py-2 bg-cyan-600 hover:bg-cyan-500 text-white rounded-xl text-sm font-bold transition-colors shadow-lg shadow-cyan-600/20"
+                className="mt-3 w-full py-2 bg-cyan-600 hover:bg-cyan-500 text-white rounded-xl text-xs font-bold transition-colors shadow-lg shadow-cyan-600/20"
               >
                 Top Up
               </button>
@@ -97,7 +109,6 @@ const AppContent: React.FC = () => {
 
       {/* Main Content */}
       <main className="flex-1 flex flex-col min-w-0 overflow-hidden">
-        {/* Header */}
         <header className="h-16 flex items-center justify-between px-6 border-b border-slate-800 bg-[#020617]/80 backdrop-blur-md z-30">
           <button 
             className="lg:hidden p-2 text-slate-400 hover:text-white"
@@ -125,7 +136,7 @@ const AppContent: React.FC = () => {
             <div className="flex items-center gap-3 pl-4 border-l border-slate-800 cursor-pointer" onClick={() => navigate('/settings')}>
               <div className="text-right hidden sm:block">
                 <p className="text-sm font-bold">Acme Corp</p>
-                <p className="text-[10px] text-emerald-400 font-black uppercase tracking-tighter">Business Plan</p>
+                <p className="text-[10px] text-emerald-400 font-black uppercase tracking-tighter">Enterprise Mode</p>
               </div>
               <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-cyan-600 to-blue-600 flex items-center justify-center text-white font-bold ring-2 ring-white/10 shadow-lg">
                 A
@@ -134,12 +145,15 @@ const AppContent: React.FC = () => {
           </div>
         </header>
 
-        {/* Scrollable Area */}
         <div className="flex-1 overflow-y-auto p-4 md:p-12 scroll-smooth">
           <Routes>
             <Route path="/" element={<Home />} />
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/agent" element={<VoiceAgent />} />
+            <Route path="/conversation" element={<ConversationAI />} />
+            <Route path="/experiments" element={<Experiments />} />
+            <Route path="/intelligence" element={<Intelligence />} />
+            <Route path="/visual" element={<VisualAI />} />
             <Route path="/knowledge" element={<KnowledgeBase />} />
             <Route path="/leads" element={<Leads />} />
             <Route path="/billing" element={<Billing />} />
