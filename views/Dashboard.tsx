@@ -16,7 +16,11 @@ import {
   ArrowRight,
   Target,
   Users,
-  Activity
+  Activity,
+  Workflow,
+  MousePointer2,
+  Mail,
+  MessageSquare
 } from 'lucide-react';
 import { 
   XAxis, 
@@ -67,15 +71,15 @@ const Dashboard: React.FC = () => {
         </div>
         <div className="flex items-center gap-2 bg-emerald-500/10 border border-emerald-500/20 rounded-full px-4 py-2 text-[10px] font-black text-emerald-400 uppercase tracking-widest animate-pulse">
           <ShieldCheck size={14} />
-          Workforce Efficiency: 99.4%
+          Workflow Integrity: 99.8%
         </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <StatCard title="Total Ad Revenue" value="$24.5k" trend="+14%" isPositive={true} icon={<TrendingUp size={24} />} subtitle="Attributed to AI" />
-        <StatCard title="Response Time" value="0.4s" trend="-98%" isPositive={true} icon={<Zap size={24} />} subtitle="Vs Human Avg: 15min" color="text-amber-400" />
-        <StatCard title="Booked Sessions" value="142" trend="+28%" isPositive={true} icon={<CalendarCheck size={24} />} subtitle="Qualified by Aurora" />
-        <StatCard title="Review Score" value="4.9★" trend="+0.2" isPositive={true} icon={<Star size={24} />} subtitle="Reputation Guard Active" color="text-yellow-400" />
+        <StatCard title="Attributed Revenue" value="$28.1k" trend="+18%" isPositive={true} icon={<TrendingUp size={24} />} subtitle="Closed by AI Sequencer" />
+        <StatCard title="Response Latency" value="0.3s" trend="-99%" isPositive={true} icon={<Zap size={24} />} subtitle="World-class performance" color="text-amber-400" />
+        <StatCard title="Lead Qualified" value="184" trend="+32%" isPositive={true} icon={<CalendarCheck size={24} />} subtitle="Direct Calendar Bookings" />
+        <StatCard title="Reputation Guard" value="4.9★" trend="+0.1" isPositive={true} icon={<Star size={24} />} subtitle="Automated Review Logic" color="text-yellow-400" />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -118,30 +122,51 @@ const Dashboard: React.FC = () => {
           </div>
         </div>
 
-        <div className="bg-[#0f172a] border border-slate-800 p-8 rounded-[32px] shadow-sm flex flex-col">
-          <h3 className="font-bold text-xl text-slate-100 font-outfit mb-6 flex items-center gap-3">
-            <Users size={20} className="text-emerald-400" />
-            Live Queue
-          </h3>
-          <div className="space-y-4 flex-1">
-            {CALENDAR_EVENTS.map((event) => (
-              <div key={event.id} className="p-4 bg-slate-900/40 border border-slate-800 rounded-2xl group hover:border-emerald-500/30 transition-all cursor-pointer">
-                <div className="flex items-center justify-between mb-2">
-                  <p className="font-bold text-slate-100 text-xs truncate">{event.title}</p>
-                  <span className="text-[8px] bg-emerald-500/10 text-emerald-400 px-2 py-0.5 rounded-full font-black uppercase">{event.type}</span>
+        <div className="flex flex-col gap-6">
+          <div className="bg-[#0f172a] border border-slate-800 p-8 rounded-[32px] shadow-sm flex flex-col flex-1">
+            <h3 className="font-bold text-xl text-slate-100 font-outfit mb-6 flex items-center gap-3">
+              <Workflow size={20} className="text-emerald-400" />
+              Auto-Sequences
+            </h3>
+            <div className="space-y-4">
+              {[
+                { label: 'Emails Dispatched', value: '428', icon: <Mail size={14} />, color: 'text-cyan-400' },
+                { label: 'SMS Confirmations', value: '312', icon: <MessageSquare size={14} />, color: 'text-emerald-400' },
+                { label: 'Social Responses', value: '156', icon: <MousePointer2 size={14} />, color: 'text-pink-500' }
+              ].map((item, idx) => (
+                <div key={idx} className="p-4 bg-slate-900/40 border border-slate-800 rounded-2xl flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className={`p-2 rounded-lg bg-slate-950 ${item.color}`}>{item.icon}</div>
+                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{item.label}</span>
+                  </div>
+                  <span className="text-sm font-bold text-white">{item.value}</span>
                 </div>
-                <div className="flex items-center gap-2 text-[9px] text-slate-500 font-black uppercase tracking-tighter">
-                  <Clock size={12} /> {event.time} • {event.date}
-                </div>
-              </div>
-            ))}
+              ))}
+            </div>
+            <button 
+              onClick={() => navigate('/agent')}
+              className="mt-6 w-full py-4 bg-slate-900 border border-slate-800 rounded-2xl text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-white hover:bg-slate-800 transition-all flex items-center justify-center gap-2 shadow-sm"
+            >
+              Manage Sequences <ArrowRight size={14} />
+            </button>
           </div>
-          <button 
-            onClick={() => navigate('/leads')}
-            className="mt-6 w-full py-4 bg-slate-900 border border-slate-800 rounded-2xl text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-white hover:bg-slate-800 transition-all flex items-center justify-center gap-2 shadow-sm"
-          >
-            Open CRM Pipeline <ArrowRight size={14} />
-          </button>
+
+          <div className="bg-[#0f172a] border border-slate-800 p-8 rounded-[32px] shadow-sm flex flex-col h-fit">
+            <h3 className="font-bold text-xl text-slate-100 font-outfit mb-4 flex items-center gap-3">
+              <Users size={20} className="text-purple-400" />
+              Live Queue
+            </h3>
+            <div className="space-y-3">
+              {CALENDAR_EVENTS.slice(0, 2).map((event) => (
+                <div key={event.id} className="p-4 bg-slate-900/40 border border-slate-800 rounded-2xl group hover:border-purple-500/30 transition-all cursor-pointer">
+                  <p className="font-bold text-slate-100 text-xs truncate mb-1">{event.title}</p>
+                  <div className="flex items-center gap-2 text-[8px] text-slate-500 font-black uppercase tracking-tighter">
+                    <Clock size={10} /> {event.time} • {event.date}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
       </div>
 

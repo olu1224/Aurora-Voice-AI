@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { HashRouter as Router, Routes, Route, NavLink, useNavigate } from 'react-router-dom';
 import { 
   LayoutDashboard, 
@@ -14,7 +14,7 @@ import {
   X, 
   Home as HomeIcon, 
   Sparkles, 
-  Image as ImageIcon, 
+  ImageIcon, 
   BrainCircuit,
   MessageSquareCode,
   Beaker
@@ -50,11 +50,29 @@ const SidebarItem: React.FC<{ to: string; icon: React.ReactNode; label: string }
 
 const AppContent: React.FC = () => {
   const [isSidebarOpen, setSidebarOpen] = useState(false);
+  const [activeProfile, setActiveProfile] = useState({
+    name: 'Acme Corp',
+    logo: null as string | null
+  });
   const navigate = useNavigate();
+
+  const loadActiveProfile = () => {
+    const savedName = localStorage.getItem('aurora_business_name') || 'Acme Corp';
+    const savedLogo = localStorage.getItem('aurora_logo');
+    setActiveProfile({
+      name: savedName,
+      logo: savedLogo || null
+    });
+  };
+
+  useEffect(() => {
+    loadActiveProfile();
+    window.addEventListener('aurora_settings_updated', loadActiveProfile);
+    return () => window.removeEventListener('aurora_settings_updated', loadActiveProfile);
+  }, []);
 
   return (
     <div className="flex h-screen bg-[#020617] text-slate-100 overflow-hidden">
-      {/* Mobile Backdrop */}
       {isSidebarOpen && (
         <div 
           className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 lg:hidden"
@@ -62,7 +80,6 @@ const AppContent: React.FC = () => {
         />
       )}
 
-      {/* Sidebar */}
       <aside className={`
         fixed lg:relative inset-y-0 left-0 w-72 bg-[#0f172a] border-r border-slate-800 z-50 transform transition-transform duration-300 lg:transform-none
         ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}
@@ -107,7 +124,6 @@ const AppContent: React.FC = () => {
         </div>
       </aside>
 
-      {/* Main Content */}
       <main className="flex-1 flex flex-col min-w-0 overflow-hidden">
         <header className="h-16 flex items-center justify-between px-6 border-b border-slate-800 bg-[#020617]/80 backdrop-blur-md z-30">
           <button 
@@ -133,13 +149,17 @@ const AppContent: React.FC = () => {
               <Bell size={20} />
               <span className="absolute top-2 right-2 w-2 h-2 bg-cyan-500 rounded-full border-2 border-[#020617]"></span>
             </button>
-            <div className="flex items-center gap-3 pl-4 border-l border-slate-800 cursor-pointer" onClick={() => navigate('/settings')}>
+            <div className="flex items-center gap-3 pl-4 border-l border-slate-800 cursor-pointer group" onClick={() => navigate('/settings')}>
               <div className="text-right hidden sm:block">
-                <p className="text-sm font-bold">Acme Corp</p>
+                <p className="text-sm font-bold group-hover:text-cyan-400 transition-colors">{activeProfile.name}</p>
                 <p className="text-[10px] text-emerald-400 font-black uppercase tracking-tighter">Enterprise Mode</p>
               </div>
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-cyan-600 to-blue-600 flex items-center justify-center text-white font-bold ring-2 ring-white/10 shadow-lg">
-                A
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-cyan-600 to-blue-600 flex items-center justify-center text-white font-bold ring-2 ring-white/10 shadow-lg overflow-hidden transition-transform group-hover:scale-105">
+                {activeProfile.logo ? (
+                  <img src={activeProfile.logo} alt="Business" className="w-full h-full object-cover" />
+                ) : (
+                  <span className="text-lg">{activeProfile.name.charAt(0)}</span>
+                )}
               </div>
             </div>
           </div>

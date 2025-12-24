@@ -51,15 +51,14 @@ export function createBlob(data: Float32Array): Blob {
 }
 
 export interface AgentConfig {
-  voiceName: 'Zephyr' | 'Puck' | 'Charon' | 'Kore' | 'Fenrir' | 'Aoede' | 'Hesperus' | 'Eos' | 'Astra' | 'Boreas' | 'Iris' | 'Nyx' | 'Helios' | 'Selene';
+  voiceName: string;
   tone: string;
   speakingRate: number;
   responsePacing: boolean;
-  ambientEffect: 'None' | 'Rainy Day' | 'Coffee Shop' | 'Office Buzz' | 'Quiet Garden';
+  ambientEffect: string;
   ambientVolume: number;
 }
 
-// THE UNIVERSAL TOOLSET
 const bookMeeting: FunctionDeclaration = {
   name: 'bookMeeting',
   parameters: {
@@ -71,15 +70,6 @@ const bookMeeting: FunctionDeclaration = {
       purpose: { type: Type.STRING }
     },
     required: ['date', 'time', 'purpose']
-  }
-};
-
-const checkEmails: FunctionDeclaration = {
-  name: 'checkEmails',
-  parameters: {
-    type: Type.OBJECT,
-    description: 'Scans the inbox for new leads or inquiries.',
-    properties: { folder: { type: Type.STRING } }
   }
 };
 
@@ -96,40 +86,52 @@ const completeLeadForm: FunctionDeclaration = {
   }
 };
 
-const sendFollowUp: FunctionDeclaration = {
-  name: 'sendFollowUp',
+const sendEmailFollowUp: FunctionDeclaration = {
+  name: 'sendEmailFollowUp',
   parameters: {
     type: Type.OBJECT,
-    description: 'Sends a follow-up SMS or Email to a lead.',
+    description: 'Dispatches an email follow-up sequence or specific document to a prospect.',
     properties: {
-      channel: { type: Type.STRING, description: 'SMS or Email' },
+      recipientEmail: { type: Type.STRING },
+      subject: { type: Type.STRING },
+      body: { type: Type.STRING, description: 'The full HTML or text content of the email.' }
+    },
+    required: ['recipientEmail', 'subject', 'body']
+  }
+};
+
+const sendSMSFollowUp: FunctionDeclaration = {
+  name: 'sendSMSFollowUp',
+  parameters: {
+    type: Type.OBJECT,
+    description: 'Sends a direct SMS/Text message for meeting confirmations or quick alerts.',
+    properties: {
+      phoneNumber: { type: Type.STRING },
       message: { type: Type.STRING }
     },
-    required: ['channel', 'message']
+    required: ['phoneNumber', 'message']
   }
 };
 
-const manageSocial: FunctionDeclaration = {
-  name: 'manageSocial',
+const sendSocialMessage: FunctionDeclaration = {
+  name: 'sendSocialMessage',
   parameters: {
     type: Type.OBJECT,
-    description: 'Replies to DMs or mentions on Instagram, Facebook, or X.',
+    description: 'Replies to or initiates a message on social platforms (Instagram, Facebook, X).',
     properties: {
-      platform: { type: Type.STRING },
-      content: { type: Type.STRING }
+      platform: { type: Type.STRING, description: 'Must be "Instagram", "Facebook", or "X"' },
+      recipientHandle: { type: Type.STRING, description: 'The social handle or user ID' },
+      message: { type: Type.STRING }
     },
-    required: ['platform', 'content']
+    required: ['platform', 'recipientHandle', 'message']
   }
 };
 
-const processYoutube: FunctionDeclaration = {
-  name: 'processYoutube',
-  parameters: {
-    type: Type.OBJECT,
-    description: 'Moderates and replies to YouTube comments.',
-    properties: { commentText: { type: Type.STRING } },
-    required: ['commentText']
-  }
+const AMBIENT_SOUNDS: Record<string, string> = {
+  'Coffee Shop': 'https://assets.mixkit.co/sfx/preview/mixkit-coffee-shop-ambience-with-people-and-clinking-cups-2715.mp3',
+  'Rainy Day': 'https://assets.mixkit.co/sfx/preview/mixkit-light-rain-falling-on-leaves-2471.mp3',
+  'Office Buzz': 'https://assets.mixkit.co/sfx/preview/mixkit-typing-on-computer-keyboard-1389.mp3',
+  'Quiet Garden': 'https://assets.mixkit.co/sfx/preview/mixkit-forest-at-night-with-birds-and-wind-2470.mp3'
 };
 
 export class AuroraVoiceService {
@@ -137,16 +139,28 @@ export class AuroraVoiceService {
   private audioContext: AudioContext | null = null;
   private outputAudioContext: AudioContext | null = null;
   private nextStartTime = 0;
-  private sources = new Set<AudioBufferSourceNode>();
   private stream: MediaStream | null = null;
+  private ambientElement: HTMLAudioElement | null = null;
 
   constructor(private config: AgentConfig) {}
 
   async connect(systemInstruction: string, onTranscription: any, onToolCall: any) {
     const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+    
     this.audioContext = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: 16000 });
     this.outputAudioContext = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: 24000 });
+    
+    await this.audioContext.resume();
+    await this.outputAudioContext.resume();
+
     this.stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+
+    if (this.config.ambientEffect !== 'None' && AMBIENT_SOUNDS[this.config.ambientEffect]) {
+      this.ambientElement = new Audio(AMBIENT_SOUNDS[this.config.ambientEffect]);
+      this.ambientElement.loop = true;
+      this.ambientElement.volume = this.config.ambientVolume;
+      this.ambientElement.play().catch(e => console.warn('Ambient autoplay blocked or failed', e));
+    }
 
     this.sessionPromise = ai.live.connect({
       model: 'gemini-2.5-flash-native-audio-preview-09-2025',
@@ -166,40 +180,46 @@ export class AuroraVoiceService {
             for (const fc of msg.toolCall.functionCalls) {
               onToolCall?.(fc.name, fc.args);
               this.sessionPromise?.then(s => s.sendToolResponse({
-                functionResponses: [{ id: fc.id, name: fc.name, response: { result: "Task executed successfully by Aurora." } }]
+                functionResponses: { id: fc.id, name: fc.name, response: { result: "ok, tool executed successfully." } }
               }));
             }
           }
           if (msg.serverContent?.outputTranscription) onTranscription(msg.serverContent.outputTranscription.text, false, false);
           if (msg.serverContent?.inputTranscription) onTranscription(msg.serverContent.inputTranscription.text, true, false);
           
-          const parts = msg.serverContent?.modelTurn?.parts;
-          if (parts && this.outputAudioContext) {
-            for (const part of parts) {
-              if (part.inlineData?.data) {
-                this.nextStartTime = Math.max(this.nextStartTime, this.outputAudioContext.currentTime);
-                const buf = await decodeAudioData(decode(part.inlineData.data), this.outputAudioContext, 24000, 1);
-                const s = this.outputAudioContext.createBufferSource();
-                s.buffer = buf;
-                s.connect(this.outputAudioContext.destination);
-                s.start(this.nextStartTime);
-                this.nextStartTime += buf.duration;
-              }
-            }
+          const audioData = msg.serverContent?.modelTurn?.parts?.[0]?.inlineData?.data;
+          if (audioData && this.outputAudioContext) {
+            this.nextStartTime = Math.max(this.nextStartTime, this.outputAudioContext.currentTime);
+            const buf = await decodeAudioData(decode(audioData), this.outputAudioContext, 24000, 1);
+            const s = this.outputAudioContext.createBufferSource();
+            s.buffer = buf;
+            s.connect(this.outputAudioContext.destination);
+            s.start(this.nextStartTime);
+            this.nextStartTime += buf.duration;
           }
+          
           if (msg.serverContent?.turnComplete) onTranscription('', false, true);
-        }
+        },
+        onerror: (e) => console.error('Live API Error:', e),
+        onclose: () => console.log('Live session closed')
       },
       config: {
         responseModalities: [Modality.AUDIO],
-        speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: this.config.voiceName } } },
-        tools: [{ functionDeclarations: [bookMeeting, checkEmails, completeLeadForm, sendFollowUp, manageSocial, processYoutube] }],
+        speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: this.config.voiceName as any } } },
+        tools: [{ functionDeclarations: [bookMeeting, completeLeadForm, sendEmailFollowUp, sendSMSFollowUp, sendSocialMessage] }],
         systemInstruction: systemInstruction,
         outputAudioTranscription: {},
         inputAudioTranscription: {},
       }
     });
+
     return this.sessionPromise;
+  }
+
+  updateAmbientVolume(volume: number) {
+    if (this.ambientElement) {
+      this.ambientElement.volume = volume;
+    }
   }
 
   disconnect() {
@@ -207,5 +227,9 @@ export class AuroraVoiceService {
     this.stream?.getTracks().forEach(t => t.stop());
     this.audioContext?.close();
     this.outputAudioContext?.close();
+    if (this.ambientElement) {
+      this.ambientElement.pause();
+      this.ambientElement = null;
+    }
   }
 }

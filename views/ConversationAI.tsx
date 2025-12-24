@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Settings, 
   BrainCircuit, 
@@ -9,231 +9,248 @@ import {
   Search, 
   RefreshCw, 
   MessageSquare, 
-  ThumbsUp, 
-  ThumbsDown, 
   Sparkles, 
   ChevronDown, 
   Info, 
   Plus, 
   Download,
   Link,
-  Loader2
+  Loader2,
+  Mic2,
+  Volume2,
+  Clock,
+  Zap,
+  ShieldCheck,
+  CheckCircle2,
+  Trash2,
+  Coffee,
+  CloudRain,
+  Briefcase,
+  Trees,
+  X,
+  FileText,
+  Upload,
+  ArrowLeft,
+  ChevronRight,
+  HelpCircle,
+  Headphones,
+  Instagram,
+  Facebook,
+  Twitter,
+  Activity,
+  ShieldAlert
 } from 'lucide-react';
 import { GoogleGenAI } from "@google/genai";
+import { VOICE_LIBRARY, VoicePersona } from '../constants';
+
+interface QAPair {
+  id: string;
+  q: string;
+  a: string;
+}
 
 const ConversationAI: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<'settings' | 'training' | 'goals'>('training');
-  const [isBotOn, setIsBotOn] = useState(false);
-  const [domainUrl, setDomainUrl] = useState('');
-  const [extracting, setExtracting] = useState(false);
-  const [question, setQuestion] = useState('');
-  const [chatMessages, setChatMessages] = useState([
-    { role: 'bot', text: 'Hey There! Here\'s how you can train me!' },
-    { role: 'bot', text: 'Start by telling me where to extract the data from? The more I know, the better I can assist you :)' }
+  const [activeTab, setActiveTab] = useState<'settings' | 'training' | 'goals' | 'channels'>('training');
+  const [trainingMode, setTrainingMode] = useState<'hub' | 'url' | 'docs' | 'qa'>('hub');
+  const [isBotOn, setIsBotOn] = useState(true);
+  
+  // Channels State
+  const [channels, setChannels] = useState([
+    { id: 'ig', name: 'Instagram', connected: true, health: 100, icon: <Instagram className="text-pink-500" /> },
+    { id: 'fb', name: 'Facebook', connected: true, health: 98, icon: <Facebook className="text-blue-600" /> },
+    { id: 'x', name: 'X / Twitter', connected: false, health: 0, icon: <Twitter className="text-slate-200" /> }
   ]);
 
-  const handleExtract = async () => {
-    if (!domainUrl || extracting) return;
-    setExtracting(true);
-    try {
-      const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-      // Using search grounding to "browse" the provided URL and summarize knowledge
-      const response = await ai.models.generateContent({
-        model: 'gemini-3-flash-preview',
-        contents: `I want to train a customer service bot for the website: ${domainUrl}. Extract the key business facts, services, and core value proposition from this domain so I can use it as training material.`,
-        config: { tools: [{ googleSearch: {} }] }
-      });
+  const [botConfig, setBotConfig] = useState(() => {
+    const saved = localStorage.getItem('aurora_bot_config');
+    return saved ? JSON.parse(saved) : {
+      voice: 'Zephyr',
+      speed: 1.0,
+      tone: 'Professional & Empathetic',
+      ambient: 'None',
+      ambientVolume: 0.1
+    };
+  });
 
-      setChatMessages(prev => [...prev, 
-        { role: 'user', text: `Extracting data from ${domainUrl}` },
-        { role: 'bot', text: `Great! I've analyzed the content at ${domainUrl}. I found several key services and business protocols. You can now see these in your Knowledge Base.` },
-        { role: 'bot', text: response.text || 'Analysis complete.' }
-      ]);
-      
-      // Persist some of this to knowledge base for the voice agent
-      localStorage.setItem('aurora_knowledge', (localStorage.getItem('aurora_knowledge') || '') + '\n\n' + response.text);
-    } catch (err) {
-      console.error(err);
-      setChatMessages(prev => [...prev, { role: 'bot', text: 'Sorry, I couldn\'t extract data from that URL. Please ensure it is publicly accessible.' }]);
-    } finally {
-      setExtracting(false);
-    }
-  };
+  useEffect(() => {
+    localStorage.setItem('aurora_bot_config', JSON.stringify(botConfig));
+  }, [botConfig]);
+
+  const renderChannels = () => (
+    <div className="space-y-8 animate-in fade-in duration-300 pb-12">
+      <div className="bg-[#0f172a] border border-slate-800 rounded-[32px] p-8 space-y-10 shadow-xl">
+        <div className="flex items-center justify-between">
+          <div>
+            <h3 className="text-2xl font-bold font-outfit text-white">Omni-Channel Integrations</h3>
+            <p className="text-sm text-slate-500 italic">Aurora acts as a centralized brain for your brand's social presence.</p>
+          </div>
+          <button className="px-6 py-2.5 bg-cyan-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-cyan-500 transition-all">
+            Connect New App
+          </button>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {channels.map((ch) => (
+            <div key={ch.id} className="p-6 bg-slate-950/50 border border-slate-800 rounded-[28px] group hover:border-cyan-500/30 transition-all flex flex-col">
+              <div className="flex justify-between items-start mb-6">
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 bg-slate-900 border border-slate-800 rounded-2xl flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">
+                    {ch.icon}
+                  </div>
+                  <div>
+                    <h4 className="font-bold text-white text-lg">{ch.name}</h4>
+                    <p className={`text-[10px] font-black uppercase tracking-widest ${ch.connected ? 'text-emerald-400' : 'text-slate-600'}`}>
+                      {ch.connected ? 'Operational' : 'Disconnected'}
+                    </p>
+                  </div>
+                </div>
+                {ch.connected && (
+                  <div className="px-3 py-1 bg-emerald-500/10 border border-emerald-500/20 rounded-full text-[9px] font-black text-emerald-400 uppercase tracking-widest flex items-center gap-2">
+                    <Activity size={12} className="animate-pulse" /> {ch.health}% Health
+                  </div>
+                )}
+              </div>
+              
+              <div className="space-y-4 flex-1">
+                <div className="p-4 bg-slate-900/50 rounded-2xl border border-slate-800 text-[11px] text-slate-400 leading-relaxed italic">
+                  {ch.connected 
+                    ? `Aurora is monitoring @sterling_corp DMs and replying to customer inquiries using the current knowledge base.`
+                    : `Connect your ${ch.name} business account to enable automated lead qualification and customer support.`}
+                </div>
+              </div>
+
+              <div className="mt-8 pt-6 border-t border-slate-800 flex justify-between items-center">
+                <button className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${
+                  ch.connected ? 'text-rose-400 hover:bg-rose-500/10' : 'bg-white text-slate-950 hover:scale-105 shadow-xl'
+                }`}>
+                  {ch.connected ? 'Revoke Access' : 'Authenticate Agent'}
+                </button>
+                {ch.connected && (
+                  <button className="text-slate-500 hover:text-white transition-colors">
+                    <Settings size={16} />
+                  </button>
+                )}
+              </div>
+            </div>
+          ))}
+
+          <div className="p-8 border-2 border-dashed border-slate-800 rounded-[28px] flex flex-col items-center justify-center text-center space-y-4 hover:border-cyan-500/30 transition-all cursor-pointer group">
+            <div className="w-16 h-16 bg-slate-900/50 rounded-full flex items-center justify-center text-slate-700 group-hover:text-cyan-400 transition-colors">
+              <Plus size={32} />
+            </div>
+            <div>
+              <p className="text-sm font-bold text-slate-500 uppercase tracking-widest">Custom Webhook</p>
+              <p className="text-[10px] text-slate-600 italic">Integrate Aurora into any proprietary chat system.</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="pt-10 border-t border-slate-800 p-6 bg-amber-500/5 rounded-[24px] border border-amber-500/10 flex items-start gap-4">
+          <ShieldAlert className="text-amber-500 shrink-0" size={20} />
+          <div>
+            <h5 className="text-[10px] font-black text-amber-500 uppercase tracking-widest mb-1">Security Disclaimer</h5>
+            <p className="text-xs text-slate-400 italic">Aurora operates within strict Meta and X API rate limits. All interactions are processed through enterprise-grade encrypted nodes to ensure your brand's data security.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
+  const renderSettings = () => (
+    <div className="space-y-6 animate-in fade-in duration-300 pb-12">
+      <div className="bg-[#0f172a] border border-slate-800 rounded-[32px] p-8 space-y-10 shadow-xl">
+        <div className="flex items-center justify-between">
+          <div>
+            <h3 className="text-2xl font-bold font-outfit text-white">Neural Persona Library</h3>
+            <p className="text-sm text-slate-500 italic">Select the vocal identity that best represents your brand's authority.</p>
+          </div>
+          <div className="px-4 py-1.5 bg-cyan-500/10 border border-cyan-500/20 rounded-full text-[10px] font-black text-cyan-400 uppercase tracking-widest flex items-center gap-2">
+            <Sparkles size={12} className="animate-pulse" /> {VOICE_LIBRARY.length} High-Fidelity Voices
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {VOICE_LIBRARY.map((v: VoicePersona) => (
+            <button 
+              key={v.id}
+              onClick={() => setBotConfig({...botConfig, voice: v.id})}
+              className={`p-6 rounded-[24px] border transition-all text-left group relative overflow-hidden flex flex-col h-full ${
+                botConfig.voice === v.id 
+                  ? 'bg-cyan-600/10 border-cyan-500 shadow-[0_10px_30px_rgba(34,211,238,0.1)]' 
+                  : 'bg-slate-900/50 border-slate-800 hover:border-slate-700'
+              }`}
+            >
+              <div className="flex justify-between items-start mb-4 relative z-10">
+                <div className={`p-3 rounded-xl transition-all ${botConfig.voice === v.id ? 'bg-cyan-500 text-slate-950' : 'bg-slate-800 text-slate-400 group-hover:text-cyan-400'}`}>
+                  <Headphones size={20} />
+                </div>
+              </div>
+              <div className="relative z-10">
+                <h4 className="font-bold text-white text-lg">{v.name}</h4>
+                <p className="text-[10px] font-black text-cyan-400 uppercase tracking-[0.2em] mb-3">{v.character}</p>
+                <p className="text-xs text-slate-300 font-medium italic mb-2">"{v.tone}"</p>
+                <p className="text-[10px] text-slate-500 leading-relaxed font-medium">Use Case: {v.useCase}</p>
+              </div>
+            </button>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
 
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-      {/* Header Section */}
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
         <div>
-          <h2 className="text-3xl font-black font-outfit text-white tracking-tight uppercase">Conversation AI</h2>
-          <p className="text-slate-400 mt-1">Unlock the power of automated conversations</p>
+          <h2 className="text-4xl font-black font-outfit text-white tracking-tight uppercase">Agent Brain</h2>
+          <p className="text-slate-400 mt-1 italic font-medium">Engineer your perfect AI employee through neural mapping.</p>
+        </div>
+        <div className="flex items-center gap-3">
+           <button 
+            onClick={() => setIsBotOn(!isBotOn)}
+            className={`flex items-center gap-2 px-6 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all ${
+              isBotOn ? 'bg-emerald-600/10 text-emerald-400 border border-emerald-500/20' : 'bg-slate-800 text-slate-500 border border-slate-700'
+            }`}
+          >
+            <Power size={14} /> {isBotOn ? 'Brain Active' : 'Neural Hibernate'}
+          </button>
         </div>
       </div>
 
-      {/* Tabs */}
-      <div className="flex border-b border-slate-800">
+      <div className="flex gap-2 p-1 bg-slate-900/50 border border-slate-800 rounded-2xl w-fit">
         {[
-          { id: 'settings', label: 'Bot Settings', icon: <Settings size={16} /> },
-          { id: 'training', label: 'Bot Training', icon: <BrainCircuit size={16} /> },
-          { id: 'goals', label: 'Bot Goals', icon: <Target size={16} /> }
+          { id: 'training', label: 'Knowledge', icon: <BrainCircuit size={14} /> },
+          { id: 'channels', label: 'Channels', icon: <Globe size={14} /> },
+          { id: 'settings', label: 'Persona', icon: <Settings size={14} /> },
+          { id: 'goals', label: 'Strategy', icon: <Target size={14} /> }
         ].map((tab) => (
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id as any)}
-            className={`px-6 py-4 text-xs font-bold uppercase tracking-widest transition-all relative flex items-center gap-2 ${
-              activeTab === tab.id ? 'text-cyan-400' : 'text-slate-500 hover:text-slate-300'
+            className={`px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-2 ${
+              activeTab === tab.id ? 'bg-cyan-600 text-white shadow-lg' : 'text-slate-500 hover:text-slate-300'
             }`}
           >
             {tab.icon}
             {tab.label}
-            {activeTab === tab.id && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-cyan-400" />}
           </button>
         ))}
       </div>
 
-      {/* Status Banner */}
-      <div className="bg-[#0f172a] border border-slate-800 rounded-2xl p-4 flex items-center justify-between shadow-sm">
-        <div className="flex items-center gap-4">
-          <button 
-            onClick={() => setIsBotOn(!isBotOn)}
-            className={`p-2 rounded-xl transition-all ${isBotOn ? 'bg-emerald-500/10 text-emerald-500' : 'bg-slate-800 text-slate-500'}`}
-          >
-            <Power size={20} />
-          </button>
-          <span className="text-sm font-bold text-slate-200">
-            Bot is {isBotOn ? 'On' : 'Off'}. 
-            <button className="ml-2 text-cyan-400 hover:underline">Click here to go to settings!</button>
-          </span>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
-        {/* Training Controls */}
-        <div className="lg:col-span-2 space-y-6">
-          <div className="p-4 bg-slate-900/50 border border-slate-800 rounded-xl flex items-center gap-3 text-xs text-slate-400">
-            <Info size={16} className="text-cyan-400" />
-            Training material is applicable to all Bots
-          </div>
-
-          {/* Extract Data Section */}
-          <div className="bg-[#0f172a] border border-slate-800 rounded-[32px] p-8 space-y-8 shadow-xl">
-            <div>
-              <h3 className="text-xl font-bold font-outfit text-white">Extract Data From</h3>
-              <p className="text-sm text-slate-500">Pull key information from your sources efficiently</p>
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+        <div className="lg:col-span-12">
+          {activeTab === 'channels' && renderChannels()}
+          {activeTab === 'settings' && renderSettings()}
+          {activeTab === 'training' && (
+            <div className="bg-[#0f172a] border border-slate-800 rounded-[32px] p-8 min-h-[400px] flex items-center justify-center text-slate-600 italic">
+               Select a training node to begin knowledge mapping.
             </div>
-
-            <div className="space-y-4">
-              <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Enter domain</label>
-              <div className="flex gap-2">
-                <div className="relative group">
-                  <select className="bg-slate-900 border border-slate-800 rounded-xl px-4 py-3 text-sm text-slate-300 focus:outline-none focus:ring-1 focus:ring-cyan-500 appearance-none pr-8">
-                    <option>Exact URL</option>
-                    <option>Wildcard</option>
-                  </select>
-                  <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-600 group-hover:text-slate-400 transition-colors" size={14} />
-                </div>
-                <div className="flex-1 relative">
-                  <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-600 text-sm">https://</span>
-                  <input 
-                    type="text" 
-                    value={domainUrl}
-                    onChange={(e) => setDomainUrl(e.target.value)}
-                    placeholder="example.com"
-                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 pl-16 text-sm text-white focus:outline-none focus:ring-1 focus:ring-cyan-500 transition-all"
-                  />
-                  <div className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-600">
-                    <Info size={16} />
-                  </div>
-                </div>
-              </div>
-              <div className="flex justify-end">
-                <button 
-                  onClick={handleExtract}
-                  disabled={extracting || !domainUrl}
-                  className="px-8 py-3 bg-white text-slate-950 rounded-xl font-black text-xs uppercase tracking-widest hover:bg-cyan-50 transition-all flex items-center gap-2 disabled:opacity-50"
-                >
-                  {extracting ? <Loader2 className="animate-spin" size={16} /> : null}
-                  Extract Data
-                </button>
-              </div>
+          )}
+          {(activeTab === 'goals') && (
+            <div className="bg-[#0f172a] border border-slate-800 rounded-[32px] p-8 min-h-[400px] flex items-center justify-center text-slate-600 italic">
+               Optimization goals and conversion strategy hub.
             </div>
-          </div>
-
-          {/* Customize Response Section */}
-          <div className="bg-[#0f172a] border border-slate-800 rounded-[32px] p-8 space-y-6 shadow-xl relative overflow-hidden">
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="text-xl font-bold font-outfit text-white">Customize your bot's response</h3>
-                <p className="text-sm text-slate-500">Train bot to handle questions on your behalf</p>
-              </div>
-              <div className="flex gap-2">
-                <button className="p-2 text-slate-500 hover:text-white bg-slate-900 rounded-lg border border-slate-800"><Search size={18} /></button>
-                <button className="p-2 text-slate-500 hover:text-white bg-slate-900 rounded-lg border border-slate-800"><Download size={18} /></button>
-              </div>
-            </div>
-
-            <div className="relative">
-              <input 
-                type="text" 
-                value={question}
-                onChange={(e) => setQuestion(e.target.value)}
-                placeholder="Add question here"
-                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-5 py-4 text-sm text-white focus:outline-none focus:ring-1 focus:ring-cyan-500 transition-all"
-              />
-              <button className="absolute right-3 top-1/2 -translate-y-1/2 p-2 text-cyan-400 hover:bg-cyan-500/10 rounded-lg">
-                <Plus size={20} />
-              </button>
-            </div>
-          </div>
-        </div>
-
-        {/* Chat Preview */}
-        <div className="bg-[#0f172a] border border-slate-800 rounded-[32px] overflow-hidden flex flex-col h-[600px] shadow-2xl">
-          <div className="p-6 bg-slate-900/50 border-b border-slate-800 flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-cyan-600/10 rounded-xl text-cyan-400">
-                <Sparkles size={18} />
-              </div>
-              <div>
-                <h3 className="text-sm font-bold text-white uppercase tracking-tight">Train Bot</h3>
-                <div className="flex items-center gap-1.5">
-                  <div className={`w-1.5 h-1.5 rounded-full ${isBotOn ? 'bg-emerald-500 animate-pulse' : 'bg-slate-600'}`} />
-                  <span className="text-[10px] text-slate-500 font-bold uppercase">{isBotOn ? 'Online' : 'Offline'}</span>
-                </div>
-              </div>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="relative">
-                <select className="bg-slate-950 border border-slate-800 rounded-lg px-3 py-1.5 text-[10px] font-bold text-slate-400 uppercase tracking-widest appearance-none pr-8 focus:outline-none">
-                  <option>Select intent</option>
-                  <option>Support</option>
-                  <option>Sales</option>
-                </select>
-                <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-600" size={12} />
-              </div>
-              <button className="p-1.5 text-slate-500 hover:text-white bg-slate-950 rounded-lg border border-slate-800"><RefreshCw size={14} /></button>
-            </div>
-          </div>
-
-          <div className="flex-1 overflow-y-auto p-6 space-y-4 bg-slate-950/20">
-            {chatMessages.map((msg, idx) => (
-              <div key={idx} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                <div className={`max-w-[85%] p-4 text-xs leading-relaxed ${
-                  msg.role === 'user' 
-                  ? 'bg-cyan-600 text-white rounded-2xl rounded-tr-none shadow-lg' 
-                  : 'bg-blue-600 text-white rounded-2xl rounded-tl-none shadow-sm'
-                }`}>
-                  {msg.text}
-                </div>
-              </div>
-            ))}
-          </div>
-
-          <div className="p-4 bg-slate-900/50 border-t border-slate-800 flex items-center justify-end gap-2">
-            <button className="p-2 text-slate-500 hover:text-white transition-all"><Sparkles size={18} /></button>
-            <button className="p-2 text-slate-500 hover:text-white transition-all"><ThumbsUp size={18} /></button>
-            <button className="p-2 text-slate-500 hover:text-white transition-all"><ThumbsDown size={18} /></button>
-          </div>
+          )}
         </div>
       </div>
     </div>

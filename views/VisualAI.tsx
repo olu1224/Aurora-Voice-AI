@@ -6,7 +6,6 @@ import {
   Sparkles, 
   RefreshCcw, 
   Download, 
-  MagicWand, 
   Loader2, 
   X,
   Plus,
@@ -39,9 +38,11 @@ const VisualAI: React.FC = () => {
 
     setIsProcessing(true);
     try {
+      // Always initialize GoogleGenAI with a named parameter apiKey.
       const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
       const base64Data = selectedImage.split(',')[1];
       
+      // Use gemini-2.5-flash-image for standard image editing tasks.
       const response = await ai.models.generateContent({
         model: 'gemini-2.5-flash-image',
         contents: {
@@ -53,11 +54,14 @@ const VisualAI: React.FC = () => {
       });
 
       let foundImage = false;
-      for (const part of response.candidates[0].content.parts) {
-        if (part.inlineData) {
-          setResultImage(`data:image/png;base64,${part.inlineData.data}`);
-          foundImage = true;
-          break;
+      // Iterate through all parts to find the image part in the response.
+      if (response.candidates && response.candidates[0].content.parts) {
+        for (const part of response.candidates[0].content.parts) {
+          if (part.inlineData) {
+            setResultImage(`data:image/png;base64,${part.inlineData.data}`);
+            foundImage = true;
+            break;
+          }
         }
       }
 

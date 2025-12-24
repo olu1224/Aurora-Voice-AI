@@ -306,8 +306,11 @@ const VideoShowcase: React.FC = () => {
 
       const downloadLink = operation.response?.generatedVideos?.[0]?.video?.uri;
       if (downloadLink) {
-        const fetchUrl = `${downloadLink}&key=${process.env.API_KEY}`;
-        setVideoUrl(fetchUrl);
+        // Fetch the video as a blob to avoid 'The element has no supported sources' error.
+        const res = await fetch(`${downloadLink}&key=${process.env.API_KEY}`);
+        const blob = await res.blob();
+        const url = URL.createObjectURL(blob);
+        setVideoUrl(url);
         clearInterval(stepInterval);
       } else {
         throw new Error("Generation failed.");
@@ -320,6 +323,15 @@ const VideoShowcase: React.FC = () => {
     }
   };
 
+  // Cleanup Object URL on unmount to prevent leaks
+  useEffect(() => {
+    return () => {
+      if (videoUrl && videoUrl.startsWith('blob:')) {
+        URL.revokeObjectURL(videoUrl);
+      }
+    };
+  }, [videoUrl]);
+
   const togglePlay = (e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
     if (!videoUrl) return;
@@ -328,7 +340,7 @@ const VideoShowcase: React.FC = () => {
         videoRef.current.pause();
         setIsPlaying(false);
       } else {
-        videoRef.current.play().then(() => setIsPlaying(true));
+        videoRef.current.play().then(() => setIsPlaying(true)).catch(() => setIsPlaying(false));
       }
     }
   };

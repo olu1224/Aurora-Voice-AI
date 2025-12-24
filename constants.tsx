@@ -18,6 +18,27 @@ export const AuroraLogo: React.FC<{ size?: number; className?: string }> = ({ si
   </svg>
 );
 
+export interface VoicePersona {
+  id: string;
+  name: string;
+  character: string;
+  tone: string;
+  useCase: string;
+  isLiveCompatible?: boolean;
+}
+
+/**
+ * Supported voices for Gemini 2.5 Live API:
+ * Zephyr, Puck, Charon, Kore, Fenrir
+ */
+export const VOICE_LIBRARY: VoicePersona[] = [
+  { id: 'Zephyr', name: 'Zephyr', character: 'The Executive', tone: 'Authoritative & Polished', useCase: 'High-ticket B2B sales.', isLiveCompatible: true },
+  { id: 'Puck', name: 'Puck', character: 'The Dynamic', tone: 'Vibrant & Playful', useCase: 'Entertainment and restaurant bookings.', isLiveCompatible: true },
+  { id: 'Kore', name: 'Kore', character: 'The Professional', tone: 'Calm & Competent', useCase: 'Medical scheduling and admin.', isLiveCompatible: true },
+  { id: 'Charon', name: 'Charon', character: 'The Guard', tone: 'Formal & Secure', useCase: 'Security and sensitive data.', isLiveCompatible: true },
+  { id: 'Fenrir', name: 'Fenrir', character: 'The Resolute', tone: 'Strong & Direct', useCase: 'Logistics and supply chain.', isLiveCompatible: true }
+];
+
 export const INDUSTRY_MASTER_LIST = [
   {
     id: 'real-estate',
@@ -141,94 +162,65 @@ export const OMNI_CHANNELS = [
   { id: 'email', name: 'Email', icon: <Mail size={18} />, color: 'text-blue-400' },
   { id: 'facebook', name: 'Facebook', icon: <Facebook size={18} />, color: 'text-blue-600' },
   { id: 'instagram', name: 'Instagram', icon: <Instagram size={18} />, color: 'text-pink-500' },
-  { id: 'x', name: 'X / Twitter', icon: <Twitter size={18} />, color: 'text-slate-200' },
-  { id: 'youtube', name: 'YouTube', icon: <Youtube size={18} />, color: 'text-rose-600' },
-  { id: 'web', name: 'Website', icon: <Globe2 size={18} />, color: 'text-indigo-400' },
-  { id: 'reviews', name: 'Google Reviews', icon: <Star size={18} />, color: 'text-amber-400' },
-];
-
-export const INDUSTRY_TEMPLATES = [
-  { id: 'insurance', name: 'Insurance', icon: <ShieldCheck size={18} />, prompt: "You are an elite insurance agent. Qualify leads by asking about their current policy age, family size, and goals. Book an appointment if they spend >$100/mo." },
-  { id: 'real-estate', name: 'Real Estate', icon: <Home size={18} />, prompt: "You are a senior real estate concierge. Ask about property type, pre-approval status, and timeline. Book a walkthrough immediately if timeline is < 30 days." },
-  { id: 'ecommerce', name: 'E-commerce', icon: <ShoppingBag size={18} />, prompt: "You are a customer growth agent. Handle tracking, returns, and upselling based on style. Push a 20% discount if they mention a competitor." },
-  { id: 'hospitality', name: 'Hospitality', icon: <Coffee size={18} />, prompt: "You are a hotel front-desk manager. Handle room availability and local concierge duties. Upsell breakfast and airport shuttle services." },
-  { id: 'medical', name: 'Medical/Health', icon: <Stethoscope size={18} />, prompt: "You are a patient coordinator. Filter by symptoms and insurance provider. Prioritize scheduling for high-value aesthetic procedures." },
-];
-
-export const STRATEGIES = [
-  { id: 'social-conversion', title: 'Social Lead Capture', tag: 'Omni-Channel', impact: 'Critical', description: 'Aurora monitors Instagram and Facebook DMs. She qualifies prospects and books meetings before they lose interest.', roi: 'Estimated 65% increase in social media conversion rates.' },
-  { id: 'youtube-growth', title: 'Comment Engagement', tag: 'Community', impact: 'High', description: 'Aurora replies to high-intent comments on YouTube videos, driving traffic to your sales landing pages.', roi: '300% boost in organic engagement velocity.' },
-  { id: 'review-sync', title: 'Reputation Loop', tag: 'Trust', impact: 'Critical', description: 'Automatic 5-star review responses and solicitation after positive interactions on any channel.', roi: 'Establishes industry dominance in local search.' }
-];
-
-export const FAQS = [
-  { 
-    q: "How does Aurora manage multiple social media logins?", 
-    a: "Aurora uses secure OAuth2 protocols to connect to your business suites. She can manage Facebook, Instagram, X, and YouTube concurrently through one unified neural node, maintaining brand consistency everywhere." 
-  },
-  { 
-    q: "Can Aurora handle image-based DMs on Instagram?", 
-    a: "Yes. Using Gemini's visual intelligence, Aurora can analyze screenshots, receipts, or property photos sent via DMs to qualify leads more effectively than text-only bots." 
-  },
-  { 
-    q: "What about negative reviews on Google or Yelp?", 
-    a: "Aurora detects negative sentiment instantly and triggers a 'Crisis Response' protocol. She offers professional resolutions and escalates the issue to your human team before the reputation damage scales." 
-  },
-  { 
-    q: "Does it work with my current website's live chat?", 
-    a: "Perfectly. Aurora can be embedded as a voice or text widget on any website, providing a seamless transition from web browsing to a qualified sales call." 
-  },
-  { 
-    q: "Can Aurora analyze video content on YouTube?", 
-    a: "Aurora can 'watch' your uploads to understand context and then intelligently moderate comments, answering questions about your products mentioned in the video." 
-  },
-  { 
-    q: "Is there an extra cost for social media channels?", 
-    a: "No. Our pay-as-you-go model applies across all channels. You are only charged for meaningful interactions and task completions, regardless of the platform." 
-  },
-  { 
-    q: "How secure is my social media access?", 
-    a: "We use enterprise-grade vaulting. Your social credentials are never stored in plain text and our AI operates within the strict API limits defined by each platform (X, Meta, Google)." 
-  },
-  { 
-    q: "Can she handle complex scheduling across multiple team calendars?", 
-    a: "Yes. Aurora syncs with Google Calendar and Outlook, finding the best slot for the prospect based on your team's real-time availability." 
-  },
-  { 
-    q: "What languages can the omni-channel agent support?", 
-    a: "Aurora is multi-lingual across 40+ languages. She can reply to an Instagram DM in Spanish, answer a phone call in English, and respond to a YouTube comment in Japanese simultaneously." 
-  }
-];
-
-export const CALENDAR_EVENTS = [
-  { id: '1', title: 'Consultation: Loft Sales', time: '10:00 AM', date: 'Today', type: 'High Value' },
-  { id: '2', title: 'Claim Review: Auto Policy', time: '1:30 PM', date: 'Today', type: 'Retention' },
-  { id: '3', title: 'Site Visit: Downtown HQ', time: '4:00 PM', date: 'Tomorrow', type: 'Closing' },
-];
-
-export const SAMPLE_LEADS = [
-  { id: '1', name: 'Sarah Wilson', email: 'swilson@loft.com', phone: '+1 555-9011', status: 'Qualified', lastCallDate: '2024-05-20', sentiment: 'Positive', notes: 'Scheduled via Instagram DM.' },
-  { id: '2', name: 'Mike Johnson', email: 'mj@tech.co', phone: '+1 555-8822', status: 'Interested', lastCallDate: '2024-05-19', sentiment: 'Neutral', notes: 'Asked about bulk insurance discounts via SMS.' },
+  { id: 'x', name: 'X / Twitter', icon: <Twitter size={18} />, color: 'text-slate-200' }
 ];
 
 export const CALL_METRICS = [
-  { date: 'Mon', revenue: 2400, calls: 45, qualified: 12 },
-  { date: 'Tue', revenue: 3600, calls: 52, qualified: 18 },
-  { date: 'Wed', revenue: 3000, calls: 38, qualified: 15 },
-  { date: 'Thu', revenue: 4400, calls: 65, qualified: 22 },
-  { date: 'Fri', revenue: 4000, calls: 48, qualified: 16 },
-  { date: 'Sat', revenue: 1600, calls: 24, qualified: 8 },
-  { date: 'Sun', revenue: 1000, calls: 15, qualified: 5 },
+  { date: 'Mon', calls: 45, qualified: 12, revenue: 2400 },
+  { date: 'Tue', calls: 52, qualified: 18, revenue: 3600 },
+  { date: 'Wed', calls: 38, qualified: 14, revenue: 3000 },
+  { date: 'Thu', calls: 65, qualified: 25, revenue: 4400 },
+  { date: 'Fri', calls: 48, qualified: 20, revenue: 4000 },
+  { date: 'Sat', calls: 24, qualified: 8, revenue: 1600 },
+  { date: 'Sun', calls: 15, qualified: 5, revenue: 1000 },
 ];
 
-export const USE_CASES = [
-  { title: "Real Estate", desc: "Qualify buyers on Instagram and book walkthroughs instantly." },
-  { title: "Insurance", desc: "Handle claims via SMS and high-value policy inquiries via Email." },
-  { title: "Retail", desc: "Automate responses to YouTube comments and Facebook tracking requests." }
+export const SAMPLE_LEADS = [
+  { id: '1', name: 'Sarah Jenkins', email: 'sarah.j@gmail.com', phone: '+1 415-555-0123', status: 'Qualified', lastCallDate: '2024-05-14', sentiment: 'Positive', notes: 'Interested in luxury waterfront properties. Budget $2M+.' },
+  { id: '2', name: 'Mark Thompson', email: 'm.thompson@outlook.com', phone: '+1 212-555-0987', status: 'Interested', lastCallDate: '2024-05-13', sentiment: 'Neutral', notes: 'Asked about claim processing times for commercial auto.' },
+  { id: '3', name: 'Elena Rodriguez', email: 'elena.r@techcorp.io', phone: '+1 650-555-4433', status: 'New', lastCallDate: '2024-05-14', sentiment: 'Positive', notes: 'Personal shopper inquiry for bridal collection.' },
+  { id: '4', name: 'David Chen', email: 'dchen@legalpartners.com', phone: '+1 312-555-7788', status: 'Qualified', lastCallDate: '2024-05-12', sentiment: 'Positive', notes: 'Scheduled initial consultation for IP litigation.' },
+  { id: '5', name: 'Sophia Miller', email: 'sophia.m@hospitality.net', phone: '+1 305-555-2211', status: 'New', lastCallDate: '2024-05-14', sentiment: 'Negative', notes: 'Upset about reservation double-booking. Handled via automated refund.' },
+];
+
+export const STRATEGIES = [
+  { title: 'Dynamic Call Routing', tag: 'Latency & Efficiency', description: 'Aurora uses predictive modeling to route high-intent leads to your best human closers after qualification.', impact: 'Critical', roi: '15% reduction in CAC' },
+  { title: 'Sentiment Nurturing', tag: 'Customer Experience', description: 'Automatically detects frustration in tone and triggers an immediate discount or supervisor escalation.', impact: 'High', roi: '22% increase in LTV' },
+  { title: 'Zero-Cold Leads', tag: 'Sales Velocity', description: 'Every inbound call is met with a 0.4s response, ensuring no lead ever touches a voicemail box.', impact: 'Critical', roi: '4.2x Appointment rate' },
 ];
 
 export const ONBOARDING_STEPS = [
-  { title: "1. Train Your Employee", desc: "Upload your business docs. Aurora builds a custom brain in seconds.", icon: <BrainCircuit size={24} />, color: "text-purple-400", link: "/knowledge" },
-  { title: "2. Define Persona", desc: "Select from 14+ elite voices tailored for high-conversion sales.", icon: <Settings2 size={24} />, color: "text-cyan-400", link: "/agent" },
-  { title: "3. Go Live & Scale", desc: "Connect to your phone or site and start capturing revenue 24/7.", icon: <Zap size={24} />, color: "text-emerald-400", link: "/agent" }
+  { id: 1, title: 'Identity Mapping', desc: 'Define your business objective and core knowledge source.' },
+  { id: 2, title: 'Voice Selection', desc: 'Choose a high-fidelity persona that matches your brand authority.' },
+  { id: 3, title: 'Channel Integration', desc: 'Connect your phone, social DMs, and CRM.' },
+  { id: 4, title: 'Neural Testing', desc: 'Deploy your first agent in a sandbox environment.' },
+];
+
+export const CALENDAR_EVENTS = [
+  { id: '1', title: 'Property Tour: 452 Oak St', time: '10:00 AM', date: 'Today', lead: 'Sarah Jenkins' },
+  { id: '2', title: 'Policy Review: Thompson Auto', time: '2:30 PM', date: 'Tomorrow', lead: 'Mark Thompson' },
+  { id: '3', title: 'Intake Call: IP Discovery', time: '11:15 AM', date: 'May 16', lead: 'David Chen' },
+];
+
+export const INDUSTRY_TEMPLATES = [
+  { id: 're', name: 'Real Estate', icon: <Home size={18} />, prompt: 'You are a professional real estate receptionist. Qualify buyers based on budget (min $500k) and location preference.' },
+  { id: 'ins', name: 'Insurance', icon: <ShieldCheck size={18} />, prompt: 'You are a licensed insurance assistant. Collect policy details and provide preliminary quotes for home and auto.' },
+  { id: 'eco', name: 'E-commerce', icon: <ShoppingBag size={18} />, prompt: 'You are a high-end personal shopper. Assist with sizing, shipping status, and product recommendations.' },
+  { id: 'hosp', name: 'Hospitality', icon: <Coffee size={18} />, prompt: 'You are a concierge for a luxury hotel. Handle room bookings, spa appointments, and local dinner recommendations.' },
+  { id: 'gen', name: 'General Business', icon: <Globe size={18} />, prompt: 'You are a versatile executive assistant. Handle general inquiries and direct callers to the appropriate department.' },
+];
+
+export const USE_CASES = [
+  { title: 'Customer Support', desc: 'Automate repetitive tickets and provide instant resolutions 24/7.' },
+  { title: 'Sales Outbound', desc: 'Scale your outreach with high-fidelity voice agents that never tire.' },
+  { title: 'Lead Qualification', desc: 'Filter high-intent prospects before they even talk to a human.' },
+];
+
+export const FAQS = [
+  { q: 'How fast is the response time?', a: 'Aurora responds in less than 0.4 seconds, which is faster than most human reaction times.' },
+  { q: 'Can I use my own voice?', a: 'Currently we support a library of high-fidelity prebuilt voices, with custom cloning available for enterprise clients.' },
+  { q: 'Is it hard to integrate with my CRM?', a: 'No, Aurora supports direct webhooks and native integrations with HubSpot, Salesforce, and Pipedrive.' },
+  { q: 'What languages does Aurora speak?', a: 'Aurora is fluent in over 40 languages with native accents and local dialect understanding.' },
+  { q: 'Is there a contract required?', a: 'No, we operate on a purely pay-as-you-go model. You only pay for the minutes Aurora is actually working.' },
+  { q: 'Is my data secure?', a: 'Yes, we use enterprise-grade encryption and follow SOC2 compliance protocols to protect all customer interactions.' },
 ];
