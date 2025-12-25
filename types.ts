@@ -32,3 +32,21 @@ export interface CallMetric {
   qualified: number;
   revenue: number;
 }
+
+export interface SocialMessage {
+  id: string;
+  platform: 'Instagram' | 'Facebook' | 'X';
+  sender: string;
+  text: string;
+  timestamp: string;
+  isAuroraResponse: boolean;
+  status: 'Delivered' | 'Read' | 'Replied';
+}
+
+export interface ChannelConnection {
+  id: string;
+  name: string;
+  connected: boolean;
+  health: number;
+  username: string;
+}
