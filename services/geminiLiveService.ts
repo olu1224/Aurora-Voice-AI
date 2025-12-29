@@ -25,16 +25,15 @@ export async function decodeAudioData(
   sampleRate: number,
   numChannels: number,
 ): Promise<AudioBuffer> {
-  const byteLength = data.byteLength;
-  const frameCount = byteLength / (2 * numChannels);
+  // Use Int16Array directly on the buffer with proper offset for PCM consistency
+  const dataInt16 = new Int16Array(data.buffer, data.byteOffset, data.byteLength / 2);
+  const frameCount = dataInt16.length / numChannels;
   const buffer = ctx.createBuffer(numChannels, frameCount, sampleRate);
-  const dv = new DataView(data.buffer, data.byteOffset, byteLength);
-  
+
   for (let channel = 0; channel < numChannels; channel++) {
     const channelData = buffer.getChannelData(channel);
     for (let i = 0; i < frameCount; i++) {
-      const sample = dv.getInt16(i * 2 * numChannels + channel * 2, true);
-      channelData[i] = sample / 32768.0;
+      channelData[i] = dataInt16[i * numChannels + channel] / 32768.0;
     }
   }
   return buffer;
@@ -44,8 +43,8 @@ export function createBlob(data: Float32Array): Blob {
   const l = data.length;
   const int16 = new Int16Array(l);
   for (let i = 0; i < l; i++) {
-    const sample = isNaN(data[i]) ? 0 : Math.max(-1, Math.min(1, data[i]));
-    int16[i] = sample * 32767;
+    // Standard scaling for 16-bit PCM
+    int16[i] = data[i] * 32768;
   }
   return {
     data: encode(new Uint8Array(int16.buffer)),
@@ -142,7 +141,9 @@ export class AuroraVoiceService {
   constructor(private config: AgentConfig) {}
 
   async connect(systemInstruction: string, onTranscription: any, onToolCall: any) {
+    // Create new instance right before use to ensure up-to-date API key
     const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+    
     this.audioContext = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: 16000 });
     this.outputAudioContext = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: 24000 });
     this.outputNode = this.outputAudioContext.createGain();
@@ -169,14 +170,21 @@ export class AuroraVoiceService {
           this.scriptProcessor = this.audioContext!.createScriptProcessor(4096, 1, 1);
           this.scriptProcessor.onaudioprocess = (e) => {
             const blob = createBlob(e.inputBuffer.getChannelData(0));
-            currentSessionPromise.then(s => { try { s.sendRealtimeInput({ media: blob }); } catch(err) {} });
+            // Always use session promise to avoid stale reference or race conditions
+            currentSessionPromise.then((session) => {
+              session.sendRealtimeInput({ media: blob });
+            }).catch(err => {
+              // Graceful handling of late-arrival audio frames after closure
+            });
           };
           this.micSource.connect(this.scriptProcessor);
           this.scriptProcessor.connect(this.audioContext!.destination);
         },
         onmessage: async (msg: LiveServerMessage) => {
           if (msg.serverContent?.interrupted) {
-            for (const source of this.sources.values()) try { source.stop(); } catch(e) {}
+            for (const source of this.sources.values()) {
+              try { source.stop(); } catch(e) {}
+            }
             this.sources.clear();
             this.nextStartTime = 0;
             return;
@@ -208,6 +216,10 @@ export class AuroraVoiceService {
             }
           }
           if (msg.serverContent?.turnComplete) onTranscription('', false, true);
+        },
+        onerror: (err) => {
+          console.error('Aurora Neural Error:', err);
+          // Potential reset logic could go here
         },
         onclose: () => console.debug('Session closed.')
       },

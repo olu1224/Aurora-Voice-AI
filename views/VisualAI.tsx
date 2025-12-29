@@ -1,4 +1,3 @@
-
 import React, { useState, useRef } from 'react';
 import { 
   ImageIcon, 
@@ -10,7 +9,8 @@ import {
   X,
   Plus,
   ArrowRight,
-  Filter
+  Filter,
+  AlertCircle
 } from 'lucide-react';
 import { GoogleGenAI } from "@google/genai";
 
@@ -19,6 +19,7 @@ const VisualAI: React.FC = () => {
   const [prompt, setPrompt] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
   const [resultImage, setResultImage] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -28,6 +29,7 @@ const VisualAI: React.FC = () => {
       reader.onloadend = () => {
         setSelectedImage(reader.result as string);
         setResultImage(null);
+        setError(null);
       };
       reader.readAsDataURL(file);
     }
@@ -36,13 +38,19 @@ const VisualAI: React.FC = () => {
   const handleEdit = async () => {
     if (!selectedImage || !prompt.trim() || isProcessing) return;
 
+    setError(null);
     setIsProcessing(true);
+
     try {
-      // Always initialize GoogleGenAI with a named parameter apiKey.
+      // Mandatory API key check
+      const hasKey = await (window as any).aistudio.hasSelectedApiKey();
+      if (!hasKey) {
+        await (window as any).aistudio.openSelectKey();
+      }
+
       const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
       const base64Data = selectedImage.split(',')[1];
       
-      // Use gemini-2.5-flash-image for standard image editing tasks.
       const response = await ai.models.generateContent({
         model: 'gemini-2.5-flash-image',
         contents: {
@@ -54,7 +62,6 @@ const VisualAI: React.FC = () => {
       });
 
       let foundImage = false;
-      // Iterate through all parts to find the image part in the response.
       if (response.candidates && response.candidates[0].content.parts) {
         for (const part of response.candidates[0].content.parts) {
           if (part.inlineData) {
@@ -66,10 +73,14 @@ const VisualAI: React.FC = () => {
       }
 
       if (!foundImage) {
-        console.error("No image returned in model response parts.");
+        setError("Model returned a text response instead of an image. Try refining your prompt.");
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
+      if (err.message?.includes("Requested entity was not found")) {
+        await (window as any).aistudio.openSelectKey();
+      }
+      setError(err.message || "Visual processing fault.");
     } finally {
       setIsProcessing(false);
     }
@@ -142,6 +153,12 @@ const VisualAI: React.FC = () => {
                    <p className="text-xs text-slate-500 italic max-w-xs">Analyzing textures and applying your prompt parameters.</p>
                  </div>
               </div>
+            ) : error ? (
+               <div className="text-center p-6 space-y-4">
+                 <AlertCircle size={40} className="text-rose-500 mx-auto" />
+                 <p className="text-sm text-slate-300 font-medium">{error}</p>
+                 <button onClick={handleEdit} className="text-xs font-black text-cyan-400 uppercase tracking-widest hover:underline">Retry Render</button>
+               </div>
             ) : (
               <div className="text-center opacity-30 flex flex-col items-center">
                  <Filter size={48} className="text-slate-600 mb-4" />
@@ -192,7 +209,6 @@ const VisualAI: React.FC = () => {
   );
 };
 
-// Simple icon for Magic Wand since lucide might not have it or I want to be safe
 const MagicWand: React.FC<{ size?: number; className?: string }> = ({ size = 20, className = "" }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
     <path d="m13 2 1.9 4.9L20 9l-5.1 2.1L13 16l-2.1-5.1L6 9l5.1-1.9L13 2Z"/>

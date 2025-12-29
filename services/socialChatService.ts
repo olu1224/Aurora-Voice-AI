@@ -1,16 +1,11 @@
-
 import { GoogleGenAI } from "@google/genai";
 
 export class SocialChatService {
-  private ai: GoogleGenAI;
-
-  constructor() {
-    this.ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-  }
-
   async generateResponse(platform: string, sender: string, message: string, businessContext: string) {
     try {
-      const response = await this.ai.models.generateContent({
+      // Initialize right before call to capture latest API key from selection dialog
+      const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+      const response = await ai.models.generateContent({
         model: 'gemini-3-flash-preview',
         contents: `
           CONTEXT: You are Aurora, the AI Sales Agent for a business.
