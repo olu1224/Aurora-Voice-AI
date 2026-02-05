@@ -5,13 +5,14 @@ import {
   Headphones, X, Send, Brain, BarChart3, Split, Timer, Clock, Sliders, 
   RotateCcw, Heart, Target, Lightbulb, Fingerprint, TrendingUp, CheckCircle2,
   Workflow, ArrowRight, Share2, Mail, Play, Pause, ChevronRight, BellRing,
-  Smartphone, FileText, ToggleRight, ToggleLeft, Plus, ShieldCheck
+  Smartphone, FileText, ToggleRight, ToggleLeft, Plus, ShieldCheck,
+  CheckCircle, ArrowUpRight
 } from 'lucide-react';
 import { AreaChart, Area, ResponsiveContainer, YAxis } from 'recharts';
 import { AuroraVoiceService } from '../services/geminiLiveService';
 import { VOICE_LIBRARY } from '../constants';
 
-// Fix: Moved internal icon components before their usage in AMBIENTS to avoid TDZ errors
+// Internal icon components
 const CalendarIcon: React.FC<{ size?: number; className?: string }> = ({ size = 16, className = "" }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className={className}>
     <rect x="3" y="4" width="18" height="18" rx="2" ry="2" /><line x1="16" y1="2" x2="16" y2="6" /><line x1="8" y1="2" x2="8" y2="6" /><line x1="3" y1="10" x2="21" y2="10" />
@@ -56,8 +57,6 @@ const INITIAL_SEQUENCES = [
       { type: 'SMS', label: 'Closing offer', delay: '24h' }
     ], 
     color: 'text-rose-400',
-    borderColor: 'border-rose-500/20',
-    bgColor: 'bg-rose-500/5',
     enabled: true
   },
   { 
@@ -70,8 +69,6 @@ const INITIAL_SEQUENCES = [
       { type: 'SMS', label: 'Q&A session invite', delay: '48h' }
     ], 
     color: 'text-emerald-400',
-    borderColor: 'border-emerald-500/20',
-    bgColor: 'bg-emerald-500/5',
     enabled: true
   },
   { 
@@ -84,8 +81,6 @@ const INITIAL_SEQUENCES = [
       { type: 'SMS', label: 'Reminder: 1hr before', delay: '-1h' }
     ], 
     color: 'text-cyan-400',
-    borderColor: 'border-cyan-500/20',
-    bgColor: 'bg-cyan-500/5',
     enabled: true
   }
 ];
@@ -111,6 +106,36 @@ const VoiceAgent: React.FC = () => {
   const [extractedFacts, setExtractedFacts] = useState<string[]>([]);
   const [intentScores, setIntentScores] = useState({ interest: 0, urgency: 0, authority: 0 });
   const [activePipelines, setActivePipelines] = useState<any[]>([]);
+
+  // Sequence Simulator Effect
+  useEffect(() => {
+    if (activePipelines.length === 0) return;
+
+    const interval = setInterval(() => {
+      setActivePipelines(current => 
+        current.map(pipe => {
+          if (pipe.currentStep < pipe.steps.length - 1) {
+            // Chance to advance step (simulate delay)
+            if (Math.random() > 0.7) {
+              const nextStep = pipe.currentStep + 1;
+              const stepInfo = pipe.steps[nextStep];
+              setAutomationLog(prev => [{
+                id: Math.random(),
+                name: `${stepInfo.type}: ${stepInfo.label}`,
+                timestamp: new Date().toLocaleTimeString(),
+                type: 'tool',
+                icon: stepInfo.type === 'Email' ? <Mail size={14} className="text-blue-400" /> : <Smartphone size={14} className="text-emerald-400" />
+              }, ...prev]);
+              return { ...pipe, currentStep: nextStep };
+            }
+          }
+          return pipe;
+        })
+      );
+    }, 4000);
+
+    return () => clearInterval(interval);
+  }, [activePipelines.length]);
 
   // A/B Testing State
   const [isABTesting, setIsABTesting] = useState(() => localStorage.getItem('aurora_ab_testing_enabled') === 'true');
@@ -194,20 +219,20 @@ const VoiceAgent: React.FC = () => {
     if (name === 'triggerNurtureSequence') {
       const seq = sequences.find((s: any) => s.id === args.sequenceType);
       if (seq && seq.enabled) {
-        setActivePipelines(prev => [{ ...seq, startTime: timestamp, status: 'Active', currentStep: 0 }, ...prev]);
-        setAutomationLog(prev => [{ id: Math.random(), name: `Sequence Init: ${seq.name}`, timestamp, type: 'automation', icon: <Workflow size={14} /> }, ...prev]);
+        setActivePipelines(prev => [{ ...seq, startTime: timestamp, status: 'Active', currentStep: 0, uuid: Math.random() }, ...prev]);
+        setAutomationLog(prev => [{ id: Math.random(), name: `Pipeline Triggered: ${seq.name}`, timestamp, type: 'automation', icon: <Workflow size={14} className="text-purple-400" /> }, ...prev]);
       }
     } else if (name === 'sendEmailFollowUp') {
-      setAutomationLog(prev => [{ id: Math.random(), name: `Email Sent: ${args.subject}`, timestamp, type: 'tool', icon: <Mail size={14} className="text-blue-400" /> }, ...prev]);
+      setAutomationLog(prev => [{ id: Math.random(), name: `Direct Email: ${args.subject}`, timestamp, type: 'tool', icon: <Mail size={14} className="text-blue-400" /> }, ...prev]);
     } else if (name === 'sendSMSFollowUp') {
-      setAutomationLog(prev => [{ id: Math.random(), name: `SMS Outbound: ${args.message.substring(0, 15)}...`, timestamp, type: 'tool', icon: <Smartphone size={14} className="text-emerald-400" /> }, ...prev]);
+      setAutomationLog(prev => [{ id: Math.random(), name: `Direct SMS sent`, timestamp, type: 'tool', icon: <Smartphone size={14} className="text-emerald-400" /> }, ...prev]);
     } else {
-      setAutomationLog(prev => [{ id: Math.random(), name: name === 'bookMeeting' ? 'Calendar Sync' : name, timestamp, type: 'tool', icon: <CalendarIcon size={14} className="text-cyan-400" /> }, ...prev]);
+      setAutomationLog(prev => [{ id: Math.random(), name: name === 'bookMeeting' ? 'Calendar Event Created' : name, timestamp, type: 'tool', icon: <CalendarIcon size={14} className="text-cyan-400" /> }, ...prev]);
     }
     
     if (name === 'bookMeeting') {
       setQualificationLevel(100);
-      setExtractedFacts(prev => Array.from(new Set([...prev, "Closing Event - Meeting Confirmed"])));
+      setExtractedFacts(prev => Array.from(new Set([...prev, "Conversion: Meeting Secured"])));
     }
   };
 
@@ -230,7 +255,7 @@ const VoiceAgent: React.FC = () => {
       }
       try {
         const service = new AuroraVoiceService({ voiceName: selectedVoice.id as any, tone: selectedVoice.tone, speakingRate: 1, responsePacing: agentConfig.responsePacing, ambientEffect: agentConfig.ambient, ambientVolume: agentConfig.ambientVolume, ambientEnabled: agentConfig.ambientEnabled });
-        await service.connect(`IDENTITY: Aurora. BUSINESS: ${kbInfo.businessName}. Close or Nurture using automated sequences.`, handleTranscription, handleToolCall);
+        await service.connect(`IDENTITY: Aurora. BUSINESS: ${kbInfo.businessName}. Task: Close meetings or nurture leads autonomously.`, handleTranscription, handleToolCall);
         serviceRef.current = service;
         setIsActive(true);
         setStatus('listening');
@@ -415,7 +440,7 @@ const VoiceAgent: React.FC = () => {
               ) : (
                 <div className="space-y-4">
                   {activePipelines.map((pipe, idx) => (
-                    <div key={idx} className={`p-4 bg-slate-900/60 border border-slate-800 rounded-2xl animate-in slide-in-from-right-2 overflow-hidden relative`}>
+                    <div key={pipe.uuid || idx} className={`p-4 bg-slate-900/60 border border-slate-800 rounded-2xl animate-in slide-in-from-right-2 overflow-hidden relative`}>
                        <div className="absolute top-0 right-0 w-24 h-24 bg-current opacity-5 blur-3xl pointer-events-none" />
                        <div className="flex items-center justify-between mb-3 relative z-10">
                          <span className={`text-[10px] font-black uppercase ${pipe.color}`}>{pipe.name}</span>
@@ -423,18 +448,17 @@ const VoiceAgent: React.FC = () => {
                        </div>
                        <div className="flex gap-1 mb-3">
                          {pipe.steps.map((_: any, i: number) => (
-                           <div key={i} className={`h-1 flex-1 rounded-full ${i <= pipe.currentStep ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]' : 'bg-slate-800'}`} />
+                           <div key={i} className={`h-1 flex-1 rounded-full transition-all duration-1000 ${i <= pipe.currentStep ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]' : 'bg-slate-800'}`} />
                          ))}
                        </div>
                        <div className="flex items-center justify-between">
                          <p className="text-[9px] text-slate-400 font-bold uppercase flex items-center gap-2">
-                           <CheckCircle2 size={10} className="text-emerald-500" /> 
-                           Step {pipe.currentStep + 1}: {pipe.steps[pipe.currentStep].label}
+                           {pipe.currentStep === pipe.steps.length - 1 ? <CheckCircle size={10} className="text-emerald-500" /> : <Loader2 size={10} className="animate-spin text-cyan-400" />}
+                           {pipe.steps[pipe.currentStep].label}
                          </p>
-                         <div className="flex items-center gap-1">
-                           <Loader2 size={8} className="animate-spin text-slate-600" />
-                           <span className="text-[7px] text-slate-600 uppercase font-black">Syncing</span>
-                         </div>
+                         <span className="text-[7px] text-slate-600 uppercase font-black tracking-widest">
+                            {pipe.currentStep === pipe.steps.length - 1 ? 'Complete' : 'Processing'}
+                         </span>
                        </div>
                     </div>
                   ))}
@@ -477,14 +501,21 @@ const VoiceAgent: React.FC = () => {
             </div>
 
             <div className="pt-6 border-t border-slate-800 mt-auto">
-              <div className="p-4 bg-gradient-to-br from-cyan-600/10 to-indigo-600/10 border border-cyan-500/20 rounded-2xl">
+              <div className="p-4 bg-gradient-to-br from-cyan-600/10 to-indigo-600/10 border border-cyan-500/20 rounded-2xl relative overflow-hidden group">
+                 <div className="absolute inset-0 bg-white/5 opacity-0 group-hover:opacity-100 transition-opacity" />
                  <div className="flex items-center justify-between mb-2">
                    <p className="text-[9px] font-black text-cyan-400 uppercase tracking-widest flex items-center gap-1.5"><Zap size={10} /> Lead Rating</p>
-                   <span className="text-xs font-black text-white">{qualificationLevel}%</span>
+                   <div className="flex items-center gap-2">
+                     <span className="text-xs font-black text-white">{qualificationLevel}%</span>
+                     {qualificationLevel >= 90 && <ArrowUpRight size={12} className="text-emerald-500 animate-bounce" />}
+                   </div>
                  </div>
                  <div className="w-full h-1.5 bg-slate-900 rounded-full overflow-hidden">
                    <div className="h-full bg-cyan-500 shadow-[0_0_15px_rgba(34,211,238,0.5)] transition-all duration-700" style={{ width: `${qualificationLevel}%` }} />
                  </div>
+                 {qualificationLevel === 100 && (
+                   <p className="text-[7px] text-emerald-400 font-black uppercase mt-2 tracking-widest animate-pulse">Conversion Outcome reached</p>
+                 )}
               </div>
             </div>
           </div>
@@ -493,7 +524,5 @@ const VoiceAgent: React.FC = () => {
     </div>
   );
 };
-
-// Internal icon stubs for specific styles moved to top
 
 export default VoiceAgent;

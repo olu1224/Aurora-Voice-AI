@@ -25,7 +25,6 @@ export async function decodeAudioData(
   sampleRate: number,
   numChannels: number,
 ): Promise<AudioBuffer> {
-  // Use Int16Array directly on the buffer with proper offset for PCM consistency
   const dataInt16 = new Int16Array(data.buffer, data.byteOffset, data.byteLength / 2);
   const frameCount = dataInt16.length / numChannels;
   const buffer = ctx.createBuffer(numChannels, frameCount, sampleRate);
@@ -43,7 +42,6 @@ export function createBlob(data: Float32Array): Blob {
   const l = data.length;
   const int16 = new Int16Array(l);
   for (let i = 0; i < l; i++) {
-    // Standard scaling for 16-bit PCM
     int16[i] = data[i] * 32768;
   }
   return {
@@ -137,11 +135,11 @@ export class AuroraVoiceService {
   private sources = new Set<AudioBufferSourceNode>();
   private scriptProcessor: ScriptProcessorNode | null = null;
   private micSource: MediaStreamAudioSourceNode | null = null;
+  private isConnected = false;
 
   constructor(private config: AgentConfig) {}
 
   async connect(systemInstruction: string, onTranscription: any, onToolCall: any) {
-    // Create new instance right before use to ensure up-to-date API key
     const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
     
     this.audioContext = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: 16000 });
@@ -156,31 +154,38 @@ export class AuroraVoiceService {
     if (this.config.ambientEnabled && this.config.ambientEffect !== 'None') this.playAmbient();
 
     const enhancedInstruction = `${systemInstruction}
-      AUTOMATION PROTOCOLS:
-      1. If user confirms a meeting: Use bookMeeting AND triggerNurtureSequence("Meeting_Confirmation_Armor").
-      2. If user is highly interested but wants to "think about it": Use triggerNurtureSequence("Hot_Lead_Closer").
-      3. If user wants more info or educational materials: Use triggerNurtureSequence("Warm_Education_Drip").
+      AURORA AUTOMATION PROTOCOLS:
+      1. OUTCOME: SUCCESSFUL BOOKING -> Mandatory tool calls: bookMeeting AND triggerNurtureSequence("Meeting_Confirmation_Armor").
+      2. OUTCOME: HESITATION/INTENT DETECTED -> Tool call: triggerNurtureSequence("Hot_Lead_Closer").
+      3. OUTCOME: GENERAL INQUIRY / INFO REQUEST -> Tool call: triggerNurtureSequence("Warm_Education_Drip").
+      4. OUTCOME: QUALIFIED LEAD -> Explicitly tell the user you are starting their follow-up sequence.
       Be conversational. Do not sound robotic when mentioning automations.`;
 
+    this.isConnected = true;
+
     const currentSessionPromise = ai.live.connect({
-      model: 'gemini-2.5-flash-native-audio-preview-09-2025',
+      model: 'gemini-2.5-flash-native-audio-preview-12-2025',
       callbacks: {
         onopen: () => {
+          if (!this.isConnected) return;
           this.micSource = this.audioContext!.createMediaStreamSource(this.stream!);
           this.scriptProcessor = this.audioContext!.createScriptProcessor(4096, 1, 1);
           this.scriptProcessor.onaudioprocess = (e) => {
+            if (!this.isConnected) return;
             const blob = createBlob(e.inputBuffer.getChannelData(0));
-            // Always use session promise to avoid stale reference or race conditions
             currentSessionPromise.then((session) => {
-              session.sendRealtimeInput({ media: blob });
+              if (this.isConnected) {
+                session.sendRealtimeInput({ media: blob });
+              }
             }).catch(err => {
-              // Graceful handling of late-arrival audio frames after closure
+              console.debug('Frame dropped due to session closure');
             });
           };
           this.micSource.connect(this.scriptProcessor);
           this.scriptProcessor.connect(this.audioContext!.destination);
         },
         onmessage: async (msg: LiveServerMessage) => {
+          if (!this.isConnected) return;
           if (msg.serverContent?.interrupted) {
             for (const source of this.sources.values()) {
               try { source.stop(); } catch(e) {}
@@ -192,9 +197,13 @@ export class AuroraVoiceService {
           if (msg.toolCall) {
             for (const fc of msg.toolCall.functionCalls) {
               onToolCall?.(fc.name, fc.args);
-              currentSessionPromise.then(s => s.sendToolResponse({
-                functionResponses: { id: fc.id, name: fc.name, response: { result: "ok" } }
-              }));
+              currentSessionPromise.then(s => {
+                if (this.isConnected) {
+                  s.sendToolResponse({
+                    functionResponses: { id: fc.id, name: fc.name, response: { result: "ok" } }
+                  });
+                }
+              });
             }
           }
           if (msg.serverContent?.outputTranscription) onTranscription(msg.serverContent.outputTranscription.text, false, false);
@@ -202,7 +211,7 @@ export class AuroraVoiceService {
           
           const parts = msg.serverContent?.modelTurn?.parts || [];
           for (const part of parts) {
-            if (part.inlineData?.data && this.outputAudioContext && this.outputNode) {
+            if (part.inlineData?.data && this.outputAudioContext && this.outputNode && this.isConnected) {
               this.nextStartTime = Math.max(this.nextStartTime, this.outputAudioContext.currentTime);
               const decodedData = decode(part.inlineData.data);
               const buf = await decodeAudioData(decodedData, this.outputAudioContext, 24000, 1);
@@ -219,9 +228,12 @@ export class AuroraVoiceService {
         },
         onerror: (err) => {
           console.error('Aurora Neural Error:', err);
-          // Potential reset logic could go here
+          this.isConnected = false;
         },
-        onclose: () => console.debug('Session closed.')
+        onclose: () => {
+          console.debug('Session closed.');
+          this.isConnected = false;
+        }
       },
       config: {
         responseModalities: [Modality.AUDIO],
@@ -263,6 +275,7 @@ export class AuroraVoiceService {
   }
 
   disconnect() {
+    this.isConnected = false;
     this.sessionPromise?.then(s => { try { s.close(); } catch(e) {} });
     if (this.stream) this.stream.getTracks().forEach(t => t.stop());
     if (this.micSource) this.micSource.disconnect();
